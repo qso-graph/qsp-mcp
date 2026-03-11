@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.qso-graph/qsp-mcp -->
 # qsp-mcp
 
 **QSP** — relay MCP tools to any OpenAI-compatible local LLM endpoint.
