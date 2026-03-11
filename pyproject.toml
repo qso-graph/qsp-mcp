@@ -1,0 +1,47 @@
+[project]
+name = "qsp-mcp"
+version = "0.1.0"
+description = "MCP tool relay for local LLM inference — bridge any OpenAI-compatible endpoint to MCP servers"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Greg Beam, KI7MT", email = "ki7mt@yahoo.com"}]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0",
+    "httpx>=0.27",
+]
+keywords = [
+    "amateur-radio", "ham-radio", "mcp", "model-context-protocol",
+    "llm", "function-calling", "tool-use", "local-inference",
+    "llama-cpp", "ollama", "vllm", "sglang", "qsp",
+    "ai", "cli", "openai-compatible", "propagation",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Communications :: Ham Radio",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://qso-graph.io"
+Documentation = "https://qso-graph.io"
+Repository = "https://github.com/qso-graph/qsp-mcp"
+Issues = "https://github.com/qso-graph/qsp-mcp/issues"
+
+[project.scripts]
+qsp-mcp = "qsp_mcp.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/qsp_mcp"]
