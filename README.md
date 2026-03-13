@@ -3,7 +3,7 @@
 
 **QSP** — relay MCP tools to any OpenAI-compatible local LLM endpoint.
 
-Named after the Q-signal **QSP** ("Will you relay?"), qsp-mcp relays tool calls between a local LLM and [MCP](https://modelcontextprotocol.io/) servers. Any model with function calling capability gains access to the full [qso-graph](https://qso-graph.io) tool ecosystem — 71+ tools across 12 servers — from local weights, not from cloud.
+Named after the Q-signal **QSP** ("Will you relay?"), qsp-mcp relays tool calls between a local LLM and [MCP](https://modelcontextprotocol.io/) servers. Any model with function calling capability gains access to the full [qso-graph](https://qso-graph.io) tool ecosystem — 82+ tools across 14 packages — from local weights, not from cloud.
 
 ## Install
 
