@@ -10,8 +10,19 @@ from __future__ import annotations
 from typing import Any
 
 
-def mcp_to_openai_tools(mcp_tools: list[Any]) -> list[dict[str, Any]]:
+def mcp_to_openai_tools(
+    mcp_tools: list[Any],
+    *,
+    namespace: bool = False,
+) -> list[dict[str, Any]]:
     """Convert MCP tool definitions to OpenAI tools array format.
+
+    Args:
+        mcp_tools: Either a flat list of MCP tool objects, or (when
+            ``namespace=True``) a list of ``(server_name, ns_name, tool)``
+            tuples produced by the relay's ``_discover_tools``.
+        namespace: If True, expect ``(server, ns_name, tool)`` tuples and
+            prepend ``[server]`` to descriptions for LLM disambiguation.
 
     MCP tool format:
         name: str
@@ -26,8 +37,17 @@ def mcp_to_openai_tools(mcp_tools: list[Any]) -> list[dict[str, Any]]:
             parameters: dict (JSON Schema)
     """
     openai_tools = []
-    for tool in mcp_tools:
-        name = tool.name if hasattr(tool, "name") else tool.get("name", "")
+    for entry in mcp_tools:
+        if namespace:
+            server, ns_name, tool = entry
+        else:
+            server = None
+            ns_name = None
+            tool = entry
+
+        bare_name = tool.name if hasattr(tool, "name") else tool.get("name", "")
+        final_name = ns_name if ns_name is not None else bare_name
+
         description = (
             tool.description
             if hasattr(tool, "description")
@@ -39,6 +59,10 @@ def mcp_to_openai_tools(mcp_tools: list[Any]) -> list[dict[str, Any]]:
             else tool.get("inputSchema", {})
         )
 
+        # Prepend server tag so the LLM can disambiguate colliding names
+        if server and ns_name != bare_name:
+            description = f"[{server}] {description}"
+
         # Clean the schema — remove keys that OpenAI doesn't expect
         parameters = _clean_schema(input_schema)
 
@@ -46,7 +70,7 @@ def mcp_to_openai_tools(mcp_tools: list[Any]) -> list[dict[str, Any]]:
             {
                 "type": "function",
                 "function": {
-                    "name": name,
+                    "name": final_name,
                     "description": description or "",
                     "parameters": parameters,
                 },

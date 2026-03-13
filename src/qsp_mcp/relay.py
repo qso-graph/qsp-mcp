@@ -231,17 +231,22 @@ class QSPRelay:
         self._servers[name] = MCPServerHandle(name=name, session=session)
 
     async def _discover_tools(self) -> None:
-        """Discover tools from all running MCP servers."""
-        all_mcp_tools = []
+        """Discover tools from all running MCP servers.
+
+        Tool names are namespaced as ``{server}__{original}`` to prevent
+        collisions when multiple servers expose identically-named tools
+        (e.g. ``solar_conditions`` in both solar-mcp and ionis-mcp).
+        The ``_original_tool_name`` map stores the reverse mapping so
+        ``_execute_tool`` can call the MCP server with the original name.
+        """
+        all_mcp_tools: list[tuple[str, Any]] = []  # (server_name, tool)
 
         for name, handle in self._servers.items():
             try:
                 result = await handle.session.list_tools()
                 handle.tools = result.tools
                 for tool in result.tools:
-                    tool_name = tool.name
-                    self._tool_server_map[tool_name] = name
-                    all_mcp_tools.append(tool)
+                    all_mcp_tools.append((name, tool))
             except Exception as e:
                 print(
                     f"[qsp] Failed to list tools from {name}: {e}",
@@ -249,18 +254,46 @@ class QSPRelay:
                 )
                 handle.available = False
 
-        self._openai_tools = mcp_to_openai_tools(all_mcp_tools)
+        # Detect which bare names collide across servers
+        name_counts: dict[str, int] = {}
+        for _srv, tool in all_mcp_tools:
+            bare = tool.name if hasattr(tool, "name") else tool.get("name", "")
+            name_counts[bare] = name_counts.get(bare, 0) + 1
+
+        # Build namespaced tool list
+        self._original_tool_name: dict[str, str] = {}  # ns_name → original
+        namespaced_tools: list[tuple[str, Any]] = []
+
+        for srv, tool in all_mcp_tools:
+            bare = tool.name if hasattr(tool, "name") else tool.get("name", "")
+            if name_counts.get(bare, 0) > 1:
+                ns_name = f"{srv}__{bare}"
+            else:
+                ns_name = bare
+            self._tool_server_map[ns_name] = srv
+            self._original_tool_name[ns_name] = bare
+            namespaced_tools.append((srv, ns_name, tool))
+
+        self._openai_tools = mcp_to_openai_tools(
+            namespaced_tools, namespace=True,
+        )
 
     async def _execute_tool(
         self, tool_name: str, arguments: dict[str, Any]
     ) -> str:
         """Execute a tool call against the appropriate MCP server.
 
+        ``tool_name`` may be namespaced (``server__original``). We resolve
+        the original MCP tool name before calling the server.
+
         Returns the result as a string (for inclusion in conversation).
         """
         server_name = self._tool_server_map.get(tool_name)
         if not server_name:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
+
+        # Resolve namespaced name → original MCP tool name
+        original_name = self._original_tool_name.get(tool_name, tool_name)
 
         handle = self._servers.get(server_name)
         if not handle or not handle.available:
@@ -275,7 +308,7 @@ class QSPRelay:
 
         try:
             result = await asyncio.wait_for(
-                handle.session.call_tool(tool_name, arguments),
+                handle.session.call_tool(original_name, arguments),
                 timeout=timeout,
             )
 
