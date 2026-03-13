@@ -82,12 +82,24 @@ def _clean_schema(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def _clean_property(prop: dict[str, Any]) -> dict[str, Any]:
-    """Clean a single property schema."""
+    """Clean a single property schema.
+
+    Drops ``default: null`` entries and ensures every property has a ``type``
+    so that llama.cpp's JSON‑schema converter doesn't choke on bare
+    ``{"default": null}`` objects.
+    """
     cleaned: dict[str, Any] = {}
 
     for key in ("type", "description", "enum", "default", "items"):
         if key in prop:
+            # llama.cpp rejects {"default": null} — omit it
+            if key == "default" and prop[key] is None:
+                continue
             cleaned[key] = prop[key]
+
+    # Guarantee a type — llama.cpp requires it
+    if "type" not in cleaned:
+        cleaned["type"] = "string"
 
     return cleaned
 

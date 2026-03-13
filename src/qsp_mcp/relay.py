@@ -144,12 +144,17 @@ class QSPRelay:
 
         # Tool call loop — up to max_tool_calls_per_turn iterations
         tool_calls_this_turn = 0
+        # First turn: force tool use so local LLMs call tools instead of
+        # describing them.  After tool results are in, switch to "auto"
+        # so the model can synthesize a text answer.
+        current_tool_choice = "required" if self._openai_tools else "auto"
 
         while True:
             response = self._llm.chat(
                 messages,
                 tools=self._openai_tools if self._openai_tools else None,
                 temperature=temperature,
+                tool_choice=current_tool_choice,
             )
 
             finish_reason = get_finish_reason(response)
@@ -200,6 +205,9 @@ class QSPRelay:
                         "content": result,
                     }
                 )
+
+            # After tool results are in, let model choose freely
+            current_tool_choice = "auto"
 
     async def _start_server(
         self, name: str, server_cfg: ServerConfig

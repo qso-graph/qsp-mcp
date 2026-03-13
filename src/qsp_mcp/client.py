@@ -45,6 +45,7 @@ class LLMClient:
         tools: list[dict[str, Any]] | None = None,
         *,
         temperature: float | None = None,
+        tool_choice: str = "auto",
     ) -> dict[str, Any]:
         """Send a chat completion request.
 
@@ -59,7 +60,7 @@ class LLMClient:
 
         if tools:
             payload["tools"] = tools
-            payload["tool_choice"] = "auto"
+            payload["tool_choice"] = tool_choice
 
         resp = self._http.post(self._endpoint, json=payload)
         resp.raise_for_status()
